@@ -1,56 +1,114 @@
 /** @format */
 
-// create and append canvas element, and get 2d context
+// DEFAULT GAME STATE
+var gameState = {
+	money: 0,
+	autoHarvestActive: false,
+	harvestPower: { manual: 1, auto: 0 },
+};
+//AUTO HARVESTER EVERY 5SEC
+const interval = setInterval(function () {
+	gameState.money += gameState.harvestPower.auto;
+}, 5000);
+
+// CREATE & POPULATE CANVAS
 var canvas = document.createElement('canvas'),
 	ctx = canvas.getContext('2d'),
-	container = document.getElementById('gamearea') || document.body;
+	container = document.body;
 container.appendChild(canvas);
-canvas.width = 320;
-canvas.height = 240;
+canvas.width = 600;
+canvas.height = 300;
+ctx.fillStyle = 'black';
+ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-// create state
-var state = game.getState();
+// PRINT CURRENT STATS
+updateStatus = function () {
+	canvas.width = 600;
+	canvas.height = 300;
+	ctx.fillStyle = 'black';
+	ctx.fillRect(0, 0, canvas.width, canvas.height);
+	ctx.fillStyle = 'white';
+	ctx.textBaseline = 'top';
+	ctx.textAlign = 'left';
+	ctx.font = '20px Arial';
+	ctx.fillText(
+		'Money: ' +
+			gameState.money +
+			', Click power: ' +
+			gameState.harvestPower.manual +
+			', auto power: ' +
+			gameState.harvestPower.auto,
+		10,
+		10
+	);
+	// figure out a way not to repeate elements
 
-// create button layout
-var buttons = state.US.map(function (us, i) {
-	return {
-		x: 170,
-		y: 40 + 32 * i,
-		w: 128,
-		h: 32,
-		label: us.dispName + ' (' + us.cost.current + ') ',
-		onAction: function (pos, opt, b, e) {
-			game.buyUpgrade(state, us);
-			b.label = us.dispName + ' (' + us.cost.current + ') ';
-		},
-	};
-});
+	ctx.fillStyle = 'red';
+	ctx.font = '15px Arial';
+	var upgradeManual = ctx.fillRect(10, 60, 160, 40);
+	ctx.fillStyle = 'white';
+	ctx.textBaseline = 'middle';
+	ctx.textAlign = 'center';
+	ctx.fillText('Upgrade manual ' + 2 * gameState.harvestPower.manual, 90, 80);
 
-// push manual gather button
-buttons.push({
-	x: 16,
-	y: 100,
-	w: 64,
-	h: 32,
-	label: 'Gather',
-	onAction: function (pos, opt, e) {
-		game.manualGather(state);
-	},
-});
+	buttonUpgradeAuto = ctx.fillStyle = 'red';
+	ctx.font = '15px Arial';
+	var upgradeAuto = ctx.fillRect(10, 110, 160, 40);
+	ctx.fillStyle = 'white';
+	ctx.textBaseline = 'middle';
+	ctx.textAlign = 'center';
+	ctx.fillText('Upgrade auto ' + 25 * gameState.harvestPower.auto, 90, 130);
 
-var blOptions = {
-	attachTo: canvas,
-	buttons: buttons,
+	ctx.fillStyle = 'red';
+	ctx.font = '30px Arial';
+	var buttonHarvest = ctx.fillRect(150, 200, 250, 80);
+	ctx.fillStyle = 'white';
+	ctx.textBaseline = 'middle';
+	ctx.textAlign = 'center';
+	ctx.fillText('Harvest', 280, 240);
 };
-var blObj = u.mkButtonLayout(blOptions);
+
+// Function to check whether a pointer is inside rectangle
+function clickHarvest(pos) {
+	return pos.x > 150 && pos.x < 150 + 250 && pos.y < 200 + 80 && pos.y > 200;
+}
+function clickUpgradeAuto(pos) {
+	return pos.x > 10 && pos.x < 10 + 160 && pos.y < 110 + 40 && pos.y > 110;
+}
+function clickUpgradeManual(pos) {
+	return pos.x > 10 && pos.x < 10 + 160 && pos.y < 60 + 40 && pos.y > 60;
+}
+
+// CLICK LOCATION & HANDLING
+function getMousePos(canvas, event) {
+	var rect = canvas.getBoundingClientRect();
+	return {
+		x: event.clientX - rect.left,
+		y: event.clientY - rect.top,
+	};
+}
+// on button click, do things
+canvas.addEventListener('click', function (evt) {
+	var mousePos = getMousePos(canvas, evt);
+	if (clickHarvest(mousePos)) {
+		gameState.money += gameState.harvestPower.manual;
+	} else if (
+		clickUpgradeAuto(mousePos) &&
+		gameState.money > 25 * 1 * gameState.harvestPower.auto
+	) {
+		gameState.harvestPower.auto += 1;
+		gameState.money -= 25 * gameState.harvestPower.auto;
+	} else if (
+		clickUpgradeManual(mousePos) &&
+		gameState.money >= 2 * gameState.harvestPower.manual
+	) {
+		gameState.harvestPower.manual += 1;
+		gameState.money -= 2 * gameState.harvestPower.manual;
+	}
+});
 
 var loop = function () {
 	requestAnimationFrame(loop);
-	draw.background(ctx, canvas);
-	draw.tickProgressBar(ctx, canvas, state);
-	draw.stateStatusInfo(ctx, state);
-	draw.buttonLayout(ctx, blObj);
-	draw.debugUpgrades(ctx, state);
-	game.update(state);
+	updateStatus();
 };
 loop();
